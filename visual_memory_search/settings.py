@@ -29,6 +29,15 @@ DEBUG = config('DEBUG', default=True, cast=bool)
 
 ALLOWED_HOSTS = ['localhost', '127.0.0.1', '.vercel.app', 'buildathon1-86h6zzh52-jacks-projects-7449b7ef.vercel.app', '4660fc8c-7de5-43c3-98ab-355fbb329f75-00-3jm0nemboosn0.riker.replit.dev', '.replit.dev']
 
+# CSRF trusted origins for cross-origin requests
+CSRF_TRUSTED_ORIGINS = [
+    'https://buildathon1-86h6zzh52-jacks-projects-7449b7ef.vercel.app',
+    'https://*.vercel.app',
+    'https://4660fc8c-7de5-43c3-98ab-355fbb329f75-00-3jm0nemboosn0.riker.replit.dev',
+    'https://*.replit.dev',
+    'http://*.replit.dev',  # For HTTP access if needed
+]
+
 
 # Application definition
 
