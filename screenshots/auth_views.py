@@ -48,8 +48,13 @@ def login_view(request):
             if user is not None:
                 login(request, user)
                 messages.success(request, f'Welcome back, {username}!')
-                next_url = request.GET.get('next', 'screenshots:home')
-                return redirect(next_url)
+                next_url = request.GET.get('next')
+                if next_url and next_url.startswith('/'):
+                    # If next_url is a valid URL path, redirect to it
+                    return redirect(next_url)
+                else:
+                    # Default redirect to home
+                    return redirect('screenshots:home')
             else:
                 messages.error(request, 'Invalid username or password.')
         else:
