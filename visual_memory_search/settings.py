@@ -207,21 +207,34 @@ LOGIN_URL = '/login/'
 LOGIN_REDIRECT_URL = '/'
 LOGOUT_REDIRECT_URL = '/'
 
-# CSRF Cookie Settings for Replit environment
-# These settings ensure CSRF cookies work properly in Replit's domain structure
-# Completely disable CSRF_COOKIE_SECURE for Replit compatibility
+# CSRF Cookie Settings - Environment-aware configuration
+# Different settings for production (Vercel HTTPS) vs development (Replit/local)
 import os
-CSRF_COOKIE_SECURE = False  # Disable HTTPS requirement entirely for Replit
+
+# Detect if we're in production environment (Vercel)
+IS_PRODUCTION = not DEBUG and any(host in ALLOWED_HOSTS for host in ['.vercel.app'])
+
+if IS_PRODUCTION:
+    # Production settings for Vercel (HTTPS required)
+    CSRF_COOKIE_SECURE = True  # Require HTTPS for CSRF cookies
+    SESSION_COOKIE_SECURE = True  # Require HTTPS for session cookies
+    CSRF_COOKIE_SAMESITE = 'Lax'  # Standard same-site policy for production
+    SESSION_COOKIE_SAMESITE = 'Lax'  # Standard same-site policy for production
+else:
+    # Development settings for Replit/local (HTTP compatible)
+    CSRF_COOKIE_SECURE = False  # Allow HTTP for development
+    SESSION_COOKIE_SECURE = False  # Allow HTTP for development
+    CSRF_COOKIE_SAMESITE = None  # Allow cross-origin for development
+    SESSION_COOKIE_SAMESITE = None  # Allow cross-origin for development
+
+# Common CSRF settings for all environments
 CSRF_COOKIE_HTTPONLY = False  # Allow JavaScript access to CSRF cookie if needed
-CSRF_COOKIE_SAMESITE = None  # Allow cross-origin requests (required for some environments)
 CSRF_COOKIE_AGE = 31449600  # 1 year
 CSRF_USE_SESSIONS = False  # Use cookies instead of sessions for CSRF tokens
 CSRF_COOKIE_DOMAIN = None  # Let Django auto-detect the domain
 CSRF_COOKIE_PATH = '/'  # Ensure cookie is available for all paths
 
-# Session cookie settings for Replit compatibility
-SESSION_COOKIE_SECURE = False  # Disable HTTPS requirement for sessions
-SESSION_COOKIE_SAMESITE = None  # Allow cross-origin session cookies
+# Common session settings
 SESSION_COOKIE_HTTPONLY = True  # Keep session cookies HTTP-only for security
 SESSION_COOKIE_AGE = 1209600  # 2 weeks
 
