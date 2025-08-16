@@ -73,3 +73,4 @@ screenshots/uploads/
 # Temporary files
 *.tmp
 *.temp
+.vercel

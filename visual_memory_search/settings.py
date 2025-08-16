@@ -27,7 +27,7 @@ SECRET_KEY = config('SECRET_KEY', default='django-insecure-a_g8p+t7a!0!v8-^7d*c#
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = config('DEBUG', default=True, cast=bool)
 
-ALLOWED_HOSTS = ['localhost', '127.0.0.1']
+ALLOWED_HOSTS = ['localhost', '127.0.0.1', '.vercel.app', 'buildathon1-86h6zzh52-jacks-projects-7449b7ef.vercel.app']
 
 
 # Application definition
@@ -77,12 +77,21 @@ WSGI_APPLICATION = 'visual_memory_search.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/5.0/ref/settings/#databases
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+# Database configuration
+# Use PostgreSQL for production (Vercel), SQLite for development
+DATABASE_URL = config('DATABASE_URL', default=None)
+if DATABASE_URL:
+    import dj_database_url
+    DATABASES = {
+        'default': dj_database_url.parse(DATABASE_URL)
     }
-}
+else:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / 'db.sqlite3',
+        }
+    }
 
 
 # Password validation
@@ -128,13 +137,16 @@ MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
 # Django-RQ Configuration
+# Use Redis URL from environment for production, fallback to localhost for development
+REDIS_URL = config('REDIS_URL', default='redis://localhost:6379/0')
 RQ_QUEUES = {
     'default': {
-        'HOST': 'localhost',
-        'PORT': 6379,
-        'DB': 0,
-        'PASSWORD': '',
+        'HOST': 'localhost' if 'localhost' in REDIS_URL else None,
+        'PORT': 6379 if 'localhost' in REDIS_URL else None,
+        'DB': 0 if 'localhost' in REDIS_URL else None,
+        'PASSWORD': '' if 'localhost' in REDIS_URL else None,
         'DEFAULT_TIMEOUT': 360,
+        'CONNECTION_KWARGS': {} if 'localhost' in REDIS_URL else {'url': REDIS_URL},
     }
 }
 
