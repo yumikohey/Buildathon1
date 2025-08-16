@@ -86,12 +86,36 @@ if DATABASE_URL:
         'default': dj_database_url.parse(DATABASE_URL)
     }
 else:
-    DATABASES = {
-        'default': {
-            'ENGINE': 'django.db.backends.sqlite3',
-            'NAME': BASE_DIR / 'db.sqlite3',
+    # Check if we're in production (Vercel) environment
+    SUPABASE_DB_HOST = config('SUPABASE_DB_HOST', default=None)
+    SUPABASE_DB_NAME = config('SUPABASE_DB_NAME', default=None)
+    SUPABASE_DB_USER = config('SUPABASE_DB_USER', default=None)
+    SUPABASE_DB_PASSWORD = config('SUPABASE_DB_PASSWORD', default=None)
+    SUPABASE_DB_PORT = config('SUPABASE_DB_PORT', default='5432')
+    
+    if SUPABASE_DB_HOST and SUPABASE_DB_NAME and SUPABASE_DB_USER and SUPABASE_DB_PASSWORD:
+        # Use Supabase PostgreSQL for production
+        DATABASES = {
+            'default': {
+                'ENGINE': 'django.db.backends.postgresql',
+                'NAME': SUPABASE_DB_NAME,
+                'USER': SUPABASE_DB_USER,
+                'PASSWORD': SUPABASE_DB_PASSWORD,
+                'HOST': SUPABASE_DB_HOST,
+                'PORT': SUPABASE_DB_PORT,
+                'OPTIONS': {
+                    'sslmode': 'require',
+                },
+            }
         }
-    }
+    else:
+        # Use SQLite for local development
+        DATABASES = {
+            'default': {
+                'ENGINE': 'django.db.backends.sqlite3',
+                'NAME': BASE_DIR / 'db.sqlite3',
+            }
+        }
 
 
 # Password validation
