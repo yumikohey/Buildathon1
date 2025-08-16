@@ -199,6 +199,14 @@ LOGIN_URL = '/login/'
 LOGIN_REDIRECT_URL = '/'
 LOGOUT_REDIRECT_URL = '/'
 
+# CSRF Cookie Settings for Replit HTTPS environment
+# These settings ensure CSRF cookies work properly in Replit's domain structure
+CSRF_COOKIE_SECURE = False  # Allow cookies over HTTP for development
+CSRF_COOKIE_HTTPONLY = False  # Allow JavaScript access to CSRF cookie if needed
+CSRF_COOKIE_SAMESITE = 'Lax'  # Less restrictive for cross-origin requests
+CSRF_COOKIE_AGE = 31449600  # 1 year
+CSRF_USE_SESSIONS = False  # Use cookies instead of sessions for CSRF tokens
+
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.0/ref/settings/#default-auto-field
 
