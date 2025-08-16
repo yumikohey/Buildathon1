@@ -1,0 +1,262 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ screenshot.filename }} - Visual Memory Search{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <!-- Header -->
+    <div class="flex justify-between items-start">
+        <div>
+            <h1 class="text-2xl font-bold text-gray-900 mb-2">{{ screenshot.filename }}</h1>
+            <div class="flex items-center space-x-4 text-sm text-gray-500">
+                <span>{{ screenshot.file_size_mb }} MB</span>
+                <span>{{ screenshot.width }}×{{ screenshot.height }}</span>
+                <span>Uploaded {{ screenshot.uploaded_at|date:"M d, Y H:i" }}</span>
+            </div>
+        </div>
+        
+        <div class="flex space-x-3">
+            {% if screenshot.status == 'failed' %}
+                <button onclick="reprocessScreenshot({{ screenshot.id }})" 
+                        class="px-4 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 focus:ring-2 focus:ring-yellow-500">
+                    Reprocess
+                </button>
+            {% endif %}
+            <button onclick="deleteScreenshot({{ screenshot.id }})" 
+                    class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 focus:ring-2 focus:ring-red-500">
+                Delete
+            </button>
+        </div>
+    </div>
+    
+    <!-- Processing Status -->
+    <div class="bg-white rounded-lg shadow-sm p-6">
+        <div class="flex items-center justify-between mb-4">
+            <h2 class="text-lg font-semibold text-gray-900">Processing Status</h2>
+            {% if screenshot.status == 'processing' %}
+                <div id="status-indicator" 
+                     hx-get="{% url 'screenshots:processing_status' screenshot.id %}"
+                     hx-trigger="every 2s"
+                     hx-swap="outerHTML">
+                    <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-yellow-100 text-yellow-800">
+                        <svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-yellow-600" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        Processing...
+                    </span>
+                </div>
+            {% else %}
+                <div id="status-indicator">
+                    {% if screenshot.status == 'completed' %}
+                        <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800">
+                            <svg class="-ml-1 mr-2 h-4 w-4 text-green-600" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path>
+                            </svg>
+                            Completed
+                        </span>
+                    {% elif screenshot.status == 'failed' %}
+                        <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-red-100 text-red-800">
+                            <svg class="-ml-1 mr-2 h-4 w-4 text-red-600" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"></path>
+                            </svg>
+                            Failed
+                        </span>
+                    {% else %}
+                        <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-gray-100 text-gray-800">
+                            Pending
+                        </span>
+                    {% endif %}
+                </div>
+            {% endif %}
+        </div>
+        
+        {% if screenshot.status == 'failed' and screenshot.error_message %}
+            <div class="bg-red-50 border border-red-200 rounded-lg p-4">
+                <div class="flex">
+                    <svg class="h-5 w-5 text-red-400" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"></path>
+                    </svg>
+                    <div class="ml-3">
+                        <h3 class="text-sm font-medium text-red-800">Processing Error</h3>
+                        <p class="mt-1 text-sm text-red-700">{{ screenshot.error_message }}</p>
+                    </div>
+                </div>
+            </div>
+        {% endif %}
+    </div>
+    
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <!-- Screenshot Image -->
+        <div class="bg-white rounded-lg shadow-sm p-6">
+            <h2 class="text-lg font-semibold text-gray-900 mb-4">Screenshot</h2>
+            <div class="bg-gray-100 rounded-lg overflow-hidden">
+                {% if screenshot.image %}
+                    <img src="{{ screenshot.image.url }}" alt="{{ screenshot.filename }}" 
+                         class="w-full h-auto max-h-96 object-contain">
+                {% else %}
+                    <div class="w-full h-64 flex items-center justify-center">
+                        <svg class="w-16 h-16 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                        </svg>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- Analysis Results -->
+        <div class="space-y-6">
+            <!-- Extracted Text -->
+            {% if screenshot.extracted_text %}
+            <div class="bg-white rounded-lg shadow-sm p-6">
+                <h3 class="text-lg font-semibold text-gray-900 mb-4">Extracted Text</h3>
+                <div class="bg-gray-50 rounded-lg p-4">
+                    <p class="text-sm text-gray-700 whitespace-pre-wrap">{{ screenshot.extracted_text }}</p>
+                </div>
+            </div>
+            {% endif %}
+            
+            <!-- Visual Description -->
+            {% if screenshot.visual_description %}
+            <div class="bg-white rounded-lg shadow-sm p-6">
+                <h3 class="text-lg font-semibold text-gray-900 mb-4">Visual Description</h3>
+                <div class="bg-gray-50 rounded-lg p-4">
+                    <p class="text-sm text-gray-700">{{ screenshot.visual_description }}</p>
+                </div>
+            </div>
+            {% endif %}
+            
+            <!-- UI Elements -->
+            {% if screenshot.ui_elements %}
+            <div class="bg-white rounded-lg shadow-sm p-6">
+                <h3 class="text-lg font-semibold text-gray-900 mb-4">UI Elements</h3>
+                <div class="bg-gray-50 rounded-lg p-4">
+                    <p class="text-sm text-gray-700">{{ screenshot.ui_elements }}</p>
+                </div>
+            </div>
+            {% endif %}
+            
+            <!-- Dominant Colors -->
+            {% if screenshot.dominant_colors %}
+            <div class="bg-white rounded-lg shadow-sm p-6">
+                <h3 class="text-lg font-semibold text-gray-900 mb-4">Dominant Colors</h3>
+                <div class="bg-gray-50 rounded-lg p-4">
+                    <p class="text-sm text-gray-700">{{ screenshot.dominant_colors }}</p>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    
+    <!-- Search History -->
+    {% if search_results %}
+    <div class="bg-white rounded-lg shadow-sm p-6">
+        <h2 class="text-lg font-semibold text-gray-900 mb-4">Recent Search Results</h2>
+        <div class="space-y-4">
+            {% for result in search_results %}
+            <div class="border border-gray-200 rounded-lg p-4">
+                <div class="flex justify-between items-start mb-2">
+                    <h4 class="text-sm font-medium text-gray-900">"{{ result.query }}"</h4>
+                    <div class="flex items-center space-x-2">
+                        <span class="text-xs text-gray-500">{{ result.created_at|date:"M d, H:i" }}</span>
+                        <span class="text-xs font-medium text-gray-700">{{ result.overall_confidence|floatformat:1 }}%</span>
+                    </div>
+                </div>
+                
+                <!-- Confidence Breakdown -->
+                <div class="grid grid-cols-4 gap-2 text-xs">
+                    <div class="text-center">
+                        <div class="text-gray-500 mb-1">Text</div>
+                        <div class="font-medium">{{ result.text_confidence|floatformat:1 }}%</div>
+                        <div class="w-full h-1 bg-gray-200 rounded-full">
+                            <div class="h-1 bg-green-500 rounded-full" style="width: {{ result.text_confidence }}%"></div>
+                        </div>
+                    </div>
+                    <div class="text-center">
+                        <div class="text-gray-500 mb-1">Visual</div>
+                        <div class="font-medium">{{ result.visual_confidence|floatformat:1 }}%</div>
+                        <div class="w-full h-1 bg-gray-200 rounded-full">
+                            <div class="h-1 bg-blue-500 rounded-full" style="width: {{ result.visual_confidence }}%"></div>
+                        </div>
+                    </div>
+                    <div class="text-center">
+                        <div class="text-gray-500 mb-1">UI</div>
+                        <div class="font-medium">{{ result.ui_confidence|floatformat:1 }}%</div>
+                        <div class="w-full h-1 bg-gray-200 rounded-full">
+                            <div class="h-1 bg-purple-500 rounded-full" style="width: {{ result.ui_confidence }}%"></div>
+                        </div>
+                    </div>
+                    <div class="text-center">
+                        <div class="text-gray-500 mb-1">Color</div>
+                        <div class="font-medium">{{ result.color_confidence|floatformat:1 }}%</div>
+                        <div class="w-full h-1 bg-gray-200 rounded-full">
+                            <div class="h-1 bg-yellow-500 rounded-full" style="width: {{ result.color_confidence }}%"></div>
+                        </div>
+                    </div>
+                </div>
+                
+                {% if result.matched_details %}
+                <div class="mt-2">
+                    <span class="text-xs text-gray-500">Matched:</span>
+                    <span class="text-xs text-gray-700">{{ result.matched_details }}</span>
+                </div>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    function reprocessScreenshot(screenshotId) {
+        if (confirm('Are you sure you want to reprocess this screenshot?')) {
+            fetch(`/screenshot/${screenshotId}/reprocess/`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                    'Content-Type': 'application/json',
+                },
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    location.reload();
+                } else {
+                    alert('Error: ' + data.error);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('An error occurred while reprocessing the screenshot.');
+            });
+        }
+    }
+    
+    function deleteScreenshot(screenshotId) {
+        if (confirm('Are you sure you want to delete this screenshot? This action cannot be undone.')) {
+            fetch(`/screenshot/${screenshotId}/delete/`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                    'Content-Type': 'application/json',
+                },
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    window.location.href = '/';
+                } else {
+                    alert('Error: ' + data.error);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('An error occurred while deleting the screenshot.');
+            });
+        }
+    }
+</script>
+{% endblock %}

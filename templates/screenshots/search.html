@@ -1,0 +1,188 @@
+{% extends 'base.html' %}
+
+{% block title %}Search - Visual Memory Search{% endblock %}
+
+{% block content %}
+<div class="space-y-4 md:space-y-6">
+    <!-- Search Header -->
+    <div class="text-center px-4">
+        <h1 class="text-2xl md:text-3xl font-bold text-gray-900 mb-2 md:mb-4">Search Screenshots</h1>
+        <p class="text-base md:text-lg text-gray-600">Use natural language to find screenshots by content, UI elements, or visual features</p>
+    </div>
+    
+    <!-- Search Form -->
+    <div class="bg-white rounded-lg shadow-sm p-4 md:p-6 mx-2 md:mx-0">
+        <form method="get" class="space-y-4">
+            <div class="flex flex-col sm:flex-row gap-3 sm:gap-4">
+                <input type="text" name="q" value="{{ query }}" 
+                       placeholder="Describe what you're looking for..." 
+                       class="search-input flex-1 px-4 py-3 text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent touch-manipulation"
+                       hx-get="{% url 'screenshots:api_search' %}"
+                       hx-trigger="keyup changed delay:500ms"
+                       hx-target="#live-results"
+                       hx-indicator="#search-loading">
+                <button type="submit" class="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors touch-manipulation font-medium">
+                    Search
+                </button>
+            </div>
+            
+            <!-- Loading indicator -->
+            <div id="search-loading" class="hidden flex items-center justify-center py-4">
+                <svg class="animate-spin h-5 w-5 text-blue-600 mr-2" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                <span class="text-gray-600">Searching...</span>
+            </div>
+        </form>
+        
+        <!-- Example queries -->
+        <div class="mt-4">
+            <p class="text-sm text-gray-500 mb-3">Example searches:</p>
+            <div class="flex flex-wrap gap-2">
+                <button onclick="setQuery('login form with username and password fields')" class="px-3 py-2 bg-gray-100 text-gray-700 rounded-full text-sm hover:bg-gray-200 transition-colors touch-manipulation">"login form"</button>
+                <button onclick="setQuery('blue submit button')" class="px-3 py-2 bg-gray-100 text-gray-700 rounded-full text-sm hover:bg-gray-200 transition-colors touch-manipulation">"blue button"</button>
+                <button onclick="setQuery('error message in red text')" class="px-3 py-2 bg-gray-100 text-gray-700 rounded-full text-sm hover:bg-gray-200 transition-colors touch-manipulation">"error message"</button>
+                <button onclick="setQuery('navigation menu with dropdown')" class="px-3 py-2 bg-gray-100 text-gray-700 rounded-full text-sm hover:bg-gray-200 transition-colors touch-manipulation">"navigation menu"</button>
+                <button onclick="setQuery('dashboard with charts and graphs')" class="px-3 py-2 bg-gray-100 text-gray-700 rounded-full text-sm hover:bg-gray-200 transition-colors touch-manipulation">"dashboard"</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Live Search Results (HTMX) -->
+    <div id="live-results" class="space-y-4">
+        <!-- Results will be loaded here via HTMX -->
+    </div>
+    
+    <!-- Search Results -->
+    {% if query %}
+    <div class="bg-white rounded-lg shadow-sm p-4 md:p-6 mx-2 md:mx-0">
+        <div class="flex justify-between items-center mb-4 md:mb-6">
+            <h2 class="text-lg md:text-xl font-semibold text-gray-900">
+                {% if total_results %}
+                    Found {{ total_results }} result{{ total_results|pluralize }} for "{{ query }}"
+                {% else %}
+                    No results found for "{{ query }}"
+                {% endif %}
+            </h2>
+        </div>
+        
+        {% if results %}
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
+            {% for result in results %}
+            <div class="bg-gray-50 rounded-lg p-3 md:p-4 hover:bg-gray-100 transition-colors touch-manipulation">
+                <div class="aspect-video bg-white rounded-lg mb-3 overflow-hidden shadow-sm">
+                    <img src="{{ result.screenshot.image.url }}" alt="Screenshot" class="w-full h-full object-contain">
+                </div>
+                <div class="space-y-2">
+                    <div class="flex justify-between items-start">
+                        <h3 class="font-medium text-gray-900 truncate text-sm md:text-base">{{ result.screenshot.filename }}</h3>
+                        <span class="text-sm font-semibold text-blue-600 ml-2 flex-shrink-0">{{ result.confidence|floatformat:0 }}%</span>
+                    </div>
+                    <p class="text-xs md:text-sm text-gray-600 line-clamp-2">{{ result.screenshot.description|truncatewords:12 }}</p>
+                    <div class="flex justify-between items-center pt-2">
+                        <span class="text-xs text-gray-500">{{ result.screenshot.created_at|date:"M d, Y" }}</span>
+                        <a href="{% url 'screenshots:detail' result.screenshot.id %}" class="text-blue-600 hover:text-blue-800 text-xs md:text-sm font-medium touch-manipulation py-1 px-2 -m-1 rounded">View Details</a>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        
+        <!-- Pagination -->
+        {% if results.has_other_pages %}
+        <div class="flex justify-center mt-8">
+            <nav class="flex space-x-2">
+                {% if results.has_previous %}
+                    <a href="?q={{ query }}&page={{ results.previous_page_number }}" 
+                       class="px-3 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-md hover:bg-gray-50">
+                        Previous
+                    </a>
+                {% endif %}
+                
+                <span class="px-3 py-2 text-sm font-medium text-gray-700 bg-blue-50 border border-blue-300 rounded-md">
+                    Page {{ results.number }} of {{ results.paginator.num_pages }}
+                </span>
+                
+                {% if results.has_next %}
+                    <a href="?q={{ query }}&page={{ results.next_page_number }}" 
+                       class="px-3 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-md hover:bg-gray-50">
+                        Next
+                    </a>
+                {% endif %}
+            </nav>
+        </div>
+        {% endif %}
+        
+        {% else %}
+        <div class="text-center py-12">
+            <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+            </svg>
+            <h3 class="mt-2 text-sm font-medium text-gray-900">No screenshots found</h3>
+            <p class="mt-1 text-sm text-gray-500">Try adjusting your search terms or upload more screenshots.</p>
+            <div class="mt-6">
+                <a href="{% url 'screenshots:home' %}" class="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700">
+                    Upload Screenshots
+                </a>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    function setQuery(query) {
+        const input = document.querySelector('input[name="q"]');
+        input.value = query;
+        input.focus();
+        
+        // Trigger HTMX search
+        htmx.trigger(input, 'keyup');
+    }
+    
+    // Handle HTMX responses for live search
+    document.body.addEventListener('htmx:afterRequest', function(evt) {
+        if (evt.detail.target.id === 'live-results') {
+            const response = JSON.parse(evt.detail.xhr.responseText);
+            displayLiveResults(response.results);
+        }
+    });
+    
+    function displayLiveResults(results) {
+        const container = document.getElementById('live-results');
+        
+        if (!results || results.length === 0) {
+            container.innerHTML = '';
+            return;
+        }
+        
+        let html = '<div class="bg-white rounded-lg shadow-sm p-4"><h3 class="text-lg font-medium text-gray-900 mb-4">Live Search Results</h3><div class="space-y-3">';
+        
+        results.forEach(result => {
+            html += `
+                <div class="flex items-center space-x-4 p-3 border border-gray-200 rounded-lg hover:bg-gray-50">
+                    <div class="flex-shrink-0">
+                        <img src="${result.image_url}" alt="${result.filename}" class="w-16 h-12 object-cover rounded">
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <div class="flex justify-between items-start">
+                            <h4 class="text-sm font-medium text-gray-900 truncate">
+                                <a href="/screenshot/${result.id}/" class="hover:text-blue-600">${result.filename}</a>
+                            </h4>
+                            <span class="text-xs font-medium text-gray-600">${result.confidence.toFixed(1)}%</span>
+                        </div>
+                        <p class="text-xs text-gray-500 mt-1">${result.extracted_text || result.visual_description || 'Processing...'}</p>
+                    </div>
+                </div>
+            `;
+        });
+        
+        html += '</div></div>';
+        container.innerHTML = html;
+    }
+</script>
+{% endblock %}
