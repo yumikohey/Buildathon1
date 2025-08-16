@@ -201,11 +201,13 @@ LOGOUT_REDIRECT_URL = '/'
 
 # CSRF Cookie Settings for Replit HTTPS environment
 # These settings ensure CSRF cookies work properly in Replit's domain structure
-CSRF_COOKIE_SECURE = False  # Allow cookies over HTTP for development
+CSRF_COOKIE_SECURE = True  # Require HTTPS for CSRF cookies (Replit uses HTTPS)
 CSRF_COOKIE_HTTPONLY = False  # Allow JavaScript access to CSRF cookie if needed
 CSRF_COOKIE_SAMESITE = 'Lax'  # Less restrictive for cross-origin requests
 CSRF_COOKIE_AGE = 31449600  # 1 year
 CSRF_USE_SESSIONS = False  # Use cookies instead of sessions for CSRF tokens
+CSRF_COOKIE_DOMAIN = None  # Let Django auto-detect the domain
+CSRF_COOKIE_PATH = '/'  # Ensure cookie is available for all paths
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.0/ref/settings/#default-auto-field
