@@ -13,4 +13,4 @@ os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'visual_memory_search.settings')
 from visual_memory_search.wsgi import application
 
 # Expose the WSGI application as 'app' for Vercel
-app = application
+app = application# Force Vercel redeploy
