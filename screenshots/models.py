@@ -3,6 +3,7 @@ from django.contrib.auth.models import User
 from django.utils import timezone
 from PIL import Image
 import os
+import uuid
 
 
 class Screenshot(models.Model):
@@ -143,3 +144,116 @@ class SearchResult(models.Model):
         )
         
         return self.overall_confidence
+
+
+class BatchJob(models.Model):
+    """Model for tracking Claude API batch processing jobs."""
+    
+    # Batch identification
+    batch_id = models.CharField(max_length=255, unique=True)  # Claude's batch ID
+    custom_batch_id = models.UUIDField(default=uuid.uuid4, unique=True)  # Our internal ID
+    
+    # User association
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='batch_jobs')
+    
+    # Batch status from Claude API
+    BATCH_STATUS_CHOICES = [
+        ('validating', 'Validating'),
+        ('in_progress', 'In Progress'),
+        ('finalizing', 'Finalizing'),
+        ('completed', 'Completed'),
+        ('failed', 'Failed'),
+        ('expired', 'Expired'),
+        ('cancelled', 'Cancelled'),
+    ]
+    status = models.CharField(
+        max_length=20,
+        choices=BATCH_STATUS_CHOICES,
+        default='validating'
+    )
+    
+    # Batch metadata
+    total_requests = models.PositiveIntegerField(default=0)
+    completed_requests = models.PositiveIntegerField(default=0)
+    failed_requests = models.PositiveIntegerField(default=0)
+    
+    # Timestamps
+    created_at = models.DateTimeField(default=timezone.now)
+    submitted_at = models.DateTimeField(blank=True, null=True)
+    completed_at = models.DateTimeField(blank=True, null=True)
+    expires_at = models.DateTimeField(blank=True, null=True)
+    
+    # Error handling
+    error_message = models.TextField(blank=True, null=True)
+    
+    class Meta:
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['batch_id']),
+            models.Index(fields=['status']),
+            models.Index(fields=['created_at']),
+            models.Index(fields=['user']),
+        ]
+    
+    def __str__(self):
+        return f"Batch {self.custom_batch_id} ({self.status}) - {self.completed_requests}/{self.total_requests}"
+    
+    @property
+    def progress_percentage(self):
+        """Calculate completion percentage."""
+        if self.total_requests == 0:
+            return 0
+        return round((self.completed_requests / self.total_requests) * 100, 1)
+    
+    @property
+    def is_complete(self):
+        """Check if batch processing is complete."""
+        return self.status in ['completed', 'failed', 'expired', 'cancelled']
+
+
+class BatchRequest(models.Model):
+    """Model for tracking individual requests within a batch job."""
+    
+    # Batch association
+    batch_job = models.ForeignKey(BatchJob, on_delete=models.CASCADE, related_name='requests')
+    screenshot = models.ForeignKey(Screenshot, on_delete=models.CASCADE, related_name='batch_requests')
+    
+    # Request identification
+    custom_id = models.CharField(max_length=255)  # Unique ID for this request within the batch
+    
+    # Request status
+    REQUEST_STATUS_CHOICES = [
+        ('pending', 'Pending'),
+        ('processing', 'Processing'),
+        ('completed', 'Completed'),
+        ('failed', 'Failed'),
+    ]
+    status = models.CharField(
+        max_length=20,
+        choices=REQUEST_STATUS_CHOICES,
+        default='pending'
+    )
+    
+    # Response data
+    response_data = models.JSONField(blank=True, null=True)  # Claude's response
+    error_message = models.TextField(blank=True, null=True)
+    
+    # Processing metadata
+    tokens_used = models.PositiveIntegerField(blank=True, null=True)
+    processing_time_ms = models.PositiveIntegerField(blank=True, null=True)
+    
+    # Timestamps
+    created_at = models.DateTimeField(default=timezone.now)
+    processed_at = models.DateTimeField(blank=True, null=True)
+    
+    class Meta:
+        ordering = ['created_at']
+        indexes = [
+            models.Index(fields=['batch_job', 'status']),
+            models.Index(fields=['custom_id']),
+            models.Index(fields=['screenshot']),
+        ]
+        unique_together = ['batch_job', 'custom_id']
+    
+    def __str__(self):
+        return f"Request {self.custom_id} for {self.screenshot.filename} ({self.status})"

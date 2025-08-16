@@ -7,13 +7,14 @@ from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
 from django.db.models import Q
 from django.utils import timezone
+from django.conf import settings
 import json
 import os
 import tempfile
 from datetime import datetime
 
-from .models import Screenshot, SearchResult
-from .tasks import queue_screenshot_processing
+from .models import Screenshot, SearchResult, BatchJob
+from .tasks import queue_screenshot_processing, queue_batch_processing
 from .search import ScreenshotSearchService
 
 
@@ -96,18 +97,33 @@ def upload_screenshots(request):
                 file_modified_at=file_modified_at
             )
             
-            # Queue for processing
-            job_id = queue_screenshot_processing(screenshot.id)
-            
             uploaded_files.append({
                 'id': screenshot.id,
                 'filename': screenshot.filename,
-                'job_id': job_id,
                 'status': 'queued'
             })
             
         except Exception as e:
             errors.append(f'{file.name}: {str(e)}')
+    
+    # Decide on processing strategy based on number of uploaded files
+    batch_threshold = getattr(settings, 'BATCH_PROCESSING_THRESHOLD', 3)
+    
+    if len(uploaded_files) >= batch_threshold:
+        # Use batch processing for multiple files
+        screenshot_ids = [file_info['id'] for file_info in uploaded_files]
+        batch_job_id = queue_batch_processing(screenshot_ids, request.user.id)
+        
+        # Update uploaded files with batch job info
+        for file_info in uploaded_files:
+            file_info['batch_job_id'] = batch_job_id
+            file_info['processing_type'] = 'batch'
+    else:
+        # Use individual processing for small uploads
+        for file_info in uploaded_files:
+            job_id = queue_screenshot_processing(file_info['id'])
+            file_info['job_id'] = job_id
+            file_info['processing_type'] = 'individual'
     
     response_data = {
         'uploaded': uploaded_files,

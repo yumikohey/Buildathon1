@@ -141,6 +141,10 @@ RQ_QUEUES = {
 # Anthropic API Configuration
 ANTHROPIC_API_KEY = config('ANTHROPIC_API_KEY', default='')
 
+# Batch Processing Configuration
+BATCH_PROCESSING_THRESHOLD = 3  # Use batch processing for 3+ screenshots
+MAX_BATCH_SIZE = 100  # Maximum screenshots per batch (Claude limit: 100,000 requests)
+
 # File Upload Settings
 FILE_UPLOAD_MAX_MEMORY_SIZE = 10 * 1024 * 1024  # 10MB
 DATA_UPLOAD_MAX_MEMORY_SIZE = 10 * 1024 * 1024  # 10MB
