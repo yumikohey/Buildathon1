@@ -27,7 +27,7 @@ SECRET_KEY = config('SECRET_KEY', default='django-insecure-a_g8p+t7a!0!v8-^7d*c#
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = config('DEBUG', default=True, cast=bool)
 
-ALLOWED_HOSTS = ['localhost', '127.0.0.1', '.vercel.app', 'buildathon1-86h6zzh52-jacks-projects-7449b7ef.vercel.app']
+ALLOWED_HOSTS = ['localhost', '127.0.0.1', '.vercel.app', 'buildathon1-86h6zzh52-jacks-projects-7449b7ef.vercel.app', '4660fc8c-7de5-43c3-98ab-355fbb329f75-00-3jm0nemboosn0.riker.replit.dev', '.replit.dev']
 
 
 # Application definition
