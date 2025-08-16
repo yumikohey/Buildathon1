@@ -162,7 +162,15 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/5.0/howto/static-files/
 
 STATIC_URL = 'static/'
-STATICFILES_DIRS = [BASE_DIR / 'static']
+
+# Environment-aware static files configuration
+# Check if static directory exists before adding to STATICFILES_DIRS
+static_dir = BASE_DIR / 'static'
+if static_dir.exists():
+    STATICFILES_DIRS = [static_dir]
+else:
+    STATICFILES_DIRS = []
+
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 
 # Media files
