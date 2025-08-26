@@ -212,7 +212,8 @@ LOGOUT_REDIRECT_URL = '/'
 import os
 
 # Detect if we're in production environment (Vercel)
-IS_PRODUCTION = not DEBUG and any(host in ALLOWED_HOSTS for host in ['.vercel.app'])
+# Check if any allowed host contains vercel.app domain
+IS_PRODUCTION = not DEBUG and any('.vercel.app' in host for host in ALLOWED_HOSTS)
 
 if IS_PRODUCTION:
     # Production settings for Vercel (HTTPS required)
