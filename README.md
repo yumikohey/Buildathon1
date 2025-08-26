@@ -8,3 +8,6 @@ Extract both OCR text AND visual descriptions
 Handle queries like "error message about auth" OR "screenshot with blue button"
 Return top 5 matches with confidence scores
 
+![app screenshot 1](file://app1a.png)
+
+![app screenshot 2](file://app1b.png)
